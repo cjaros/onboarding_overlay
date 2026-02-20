@@ -10,6 +10,10 @@ import 'label_painter.dart';
 import 'overlay_painter.dart';
 import 'step.dart';
 
+typedef OverlayAnimationBuilder = Animation<double> Function(
+  AnimationController controller,
+);
+
 const double sideGap = 5;
 const Color debugBorderColor = Color(0xFFFF0000);
 const TextStyle headlineStyle = TextStyle(
@@ -27,18 +31,23 @@ const TextStyle bodyTextStyle = TextStyle(
 class OnboardingStepper extends StatefulWidget {
   OnboardingStepper({
     Key? key,
-    this.initialIndex = 0,
+    required this.constraints,
     required this.steps,
+    this.initialIndex = 0,
     this.duration = const Duration(milliseconds: 350),
     this.pulseDuration = const Duration(milliseconds: 1000),
     this.onChanged,
     this.onEnd,
     this.autoSizeTexts = false,
+    this.titleBodySeparator = const SizedBox.shrink(),
     this.stepIndexes = const <int>[],
     this.debugBoundaries = false,
     this.scaleWidth = 1.0,
     this.scaleHeight = 1.0,
-    required this.constraints,
+    this.reverseDuration,
+    this.overlayCurve = Curves.ease,
+    this.overlayReverseCurve,
+    this.overlayAnimationBuilder,
   })  : assert(() {
           if (stepIndexes.isNotEmpty && !stepIndexes.contains(initialIndex)) {
             final List<DiagnosticsNode> information = <DiagnosticsNode>[
@@ -77,6 +86,9 @@ class OnboardingStepper extends StatefulWidget {
   /// By default is `false`, turns on to usage of `AutoSizeText` widget and ignore `maxLines`
   final bool autoSizeTexts;
 
+  /// Widget placed between the step `titleText` and `bodyText` in the default label UI.
+  final Widget titleBodySeparator;
+
   /// By default the value is false
   final bool debugBoundaries;
 
@@ -89,6 +101,19 @@ class OnboardingStepper extends StatefulWidget {
   /// By default the value is 1.0
   /// That property would be used with responsive_framework package
   final double scaleHeight;
+
+  /// duration used when reversing (fading out). Defaults to [duration] if null.
+  final Duration? reverseDuration;
+
+  /// shared forward curve (used only if [overlayAnimationBuilder] is null)
+  final Curve overlayCurve;
+
+  /// shared reverse curve (used only if [overlayAnimationBuilder] is null)
+  final Curve? overlayReverseCurve;
+
+  /// advanced hook to control the overlay animation (shared across all steps).
+  /// If provided, [overlayCurve]/[overlayReverseCurve] are ignored.
+  final OverlayAnimationBuilder? overlayAnimationBuilder;
 
   @override
   OnboardingStepperState createState() => OnboardingStepperState();
@@ -117,6 +142,7 @@ class OnboardingStepperState extends State<OnboardingStepper>
     overlayController = AnimationController(
       vsync: this,
       duration: widget.duration,
+      reverseDuration: widget.reverseDuration,
     )..addListener(() {
         setState(() {});
       });
@@ -128,10 +154,7 @@ class OnboardingStepperState extends State<OnboardingStepper>
         setState(() {});
       });
 
-    overlayAnimation = CurvedAnimation(
-      curve: Curves.ease,
-      parent: overlayController,
-    );
+    _configureOverlayAnimation();
 
     pulseAnimationInner = CurvedAnimation(
       curve: Curves.ease,
@@ -176,7 +199,7 @@ class OnboardingStepperState extends State<OnboardingStepper>
       return true;
     }());
     assert(() {
-      if (fromIndex >= widget.steps.length && fromIndex < 0) {
+      if (fromIndex >= widget.steps.length || fromIndex < 0) {
         final List<DiagnosticsNode> information = <DiagnosticsNode>[
           ErrorSummary(
               'fromIndex cannot be bigger then the number of steps or smaller than zero.'),
@@ -271,11 +294,34 @@ class OnboardingStepperState extends State<OnboardingStepper>
   @override
   void didUpdateWidget(OnboardingStepper oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (oldWidget.constraints != widget.constraints) {
       setState(() {
         calcWidgetRect(widget.steps[stepperIndex]);
       });
     }
+
+    if (oldWidget.duration != widget.duration ||
+        oldWidget.reverseDuration != widget.reverseDuration) {
+      overlayController.duration = widget.duration;
+      overlayController.reverseDuration = widget.reverseDuration;
+    }
+
+    if (oldWidget.overlayAnimationBuilder != widget.overlayAnimationBuilder ||
+        oldWidget.overlayCurve != widget.overlayCurve ||
+        oldWidget.overlayReverseCurve != widget.overlayReverseCurve) {
+      _configureOverlayAnimation();
+    }
+  }
+
+  void _configureOverlayAnimation() {
+    overlayAnimation = widget.overlayAnimationBuilder != null
+        ? widget.overlayAnimationBuilder!(overlayController)
+        : CurvedAnimation(
+            parent: overlayController,
+            curve: widget.overlayCurve,
+            reverseCurve: widget.overlayReverseCurve,
+          );
   }
 
   @override
@@ -315,7 +361,7 @@ class OnboardingStepperState extends State<OnboardingStepper>
 
   void setTweensAndAnimate(OnboardingStep step) async {
     overlayColorTween = ColorTween(
-      begin: step.overlayColor.withOpacity(overlayAnimation.value),
+      begin: step.overlayColor.withValues(alpha: overlayAnimation.value),
       end: step.overlayColor,
     );
 
@@ -602,6 +648,7 @@ class OnboardingStepperState extends State<OnboardingStepper>
               labelKey: labelKey,
               overlayAnimation: overlayAnimation,
               debugBoundaries: widget.debugBoundaries,
+              titleBodySeparator: widget.titleBodySeparator,
               size: Size(boxWidth, boxHeight),
               isTop: isTop,
               step: step,
@@ -630,6 +677,7 @@ class AnimatedLabel extends StatelessWidget {
     required this.labelKey,
     required this.overlayAnimation,
     required this.debugBoundaries,
+    required this.titleBodySeparator,
     required this.size,
     required this.isTop,
     required this.isEmpty,
@@ -650,6 +698,7 @@ class AnimatedLabel extends StatelessWidget {
   final bool isTop;
   final bool isEmpty;
   final OnboardingStep step;
+  final Widget titleBodySeparator;
   final Rect holeAnimatedValue;
   final double leftPos;
   final double topPos;
@@ -725,6 +774,7 @@ class AnimatedLabel extends StatelessWidget {
                                     style: activeTitleStyle,
                                     children: <InlineSpan>[
                                       const TextSpan(text: '\n'),
+                                      WidgetSpan(child: titleBodySeparator),
                                       TextSpan(
                                         text: step.bodyText,
                                         style: activeBodyStyle,
@@ -751,6 +801,7 @@ class AnimatedLabel extends StatelessWidget {
                                       textAlign: step.textAlign,
                                       textDirection: Directionality.of(context),
                                     ),
+                                    titleBodySeparator,
                                     Text(
                                       step.bodyText,
                                       style: activeBodyStyle,

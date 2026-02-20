@@ -1,9 +1,23 @@
+## [3.3.0]
+
+- add: 'titleBodySeparator' widget property to customize spacing between title and body text in labels
+- add: 'overlayCurve' property to control the forward animation curve for the overlay
+- add: 'overlayReverseCurve' property to control the reverse animation curve for the overlay
+- add: 'reverseDuration' property to specify a different duration when reversing overlay animations
+- add: 'overlayAnimationBuilder' hook for advanced control over overlay animations
+- fix: fromIndex assertion logic (changed AND to OR condition)
+- fix: deprecated withOpacity() replaced with withValues(alpha:)
+- refactor: extracted overlay animation configuration into \_configureOverlayAnimation method
+- update: dependencies
+
 ## [3.2.4]
+
 - add: 'labelBoxVerticalDistance' property to the OnboardingStep so that the user can
   control the space between the label box and the overlay hole. Makes kSpace spacing value customizable.
   (Thanks to [MarcinusX](https://github.com/MarcinusX))
 
 ## [3.2.3]
+
 - add: 'labelBoxMargin' property to the OnboardingStep so that the user can
   control the space around the label box. Especially useful for limiting maximum width of the label box.
   (Thanks to [MarcinusX](https://github.com/MarcinusX))

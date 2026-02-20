@@ -13,17 +13,22 @@ class Onboarding extends StatefulWidget {
   /// This class creates an instance of [StatefulWidget].
   const Onboarding({
     Key? key,
+    required this.steps,
+    required this.child,
     this.initialIndex = 0,
     this.onChanged,
     this.onEnd,
     this.autoSizeTexts = false,
-    required this.steps,
-    required this.child,
+    this.titleBodySeparator = const SizedBox.shrink(),
     this.duration = const Duration(milliseconds: 350),
     this.globalOnboarding = false,
     this.debugBoundaries = false,
     this.scaleHeight = 1.0,
     this.scaleWidth = 1.0,
+    this.reverseDuration,
+    this.overlayCurve = Curves.ease,
+    this.overlayReverseCurve,
+    this.overlayAnimationBuilder,
   }) : super(key: key);
 
   /// The first index of the Onboarding, by default it is 0
@@ -43,6 +48,12 @@ class Onboarding extends StatefulWidget {
   /// and will overflow both with ellipsis, the second one is to automatically resize the texts.
   /// This is controlled by the Onboarding property `autoSizeTexts`, which default value is `false`.
   final bool autoSizeTexts;
+
+  /// Widget placed between the step `titleText` and `bodyText` in the default label UI.
+  ///
+  /// Useful for customizing vertical spacing (e.g. `SizedBox(height: 8)`), or inserting a
+  /// divider-like element.
+  final Widget titleBodySeparator;
 
   /// By default, the value used is `false`
   final bool debugBoundaries;
@@ -73,6 +84,19 @@ class Onboarding extends StatefulWidget {
   /// That property would be used with responsive_framework package,
   /// which scales the widgets
   final double scaleHeight;
+
+  /// Duration used when reversing (fading out). Defaults to [duration] if null.
+  final Duration? reverseDuration;
+
+  /// Shared forward curve (used only if [overlayAnimationBuilder] is null)
+  final Curve overlayCurve;
+
+  /// Shared reverse curve (used only if [overlayAnimationBuilder] is null)
+  final Curve? overlayReverseCurve;
+
+  /// Advanced hook to control the overlay animation (shared across all steps).
+  /// If provided, [overlayCurve]/[overlayReverseCurve] are ignored.
+  final OverlayAnimationBuilder? overlayAnimationBuilder;
 
   /// Get the closest Onboarding state in the widget tree
   static OnboardingState? of(BuildContext context,
@@ -175,9 +199,14 @@ class OnboardingState extends State<Onboarding> {
             stepIndexes: stepIndexes,
             duration: widget.duration,
             autoSizeTexts: widget.autoSizeTexts,
+            titleBodySeparator: widget.titleBodySeparator,
             debugBoundaries: widget.debugBoundaries,
             scaleWidth: widget.scaleWidth,
             scaleHeight: widget.scaleHeight,
+            reverseDuration: widget.reverseDuration,
+            overlayCurve: widget.overlayCurve,
+            overlayReverseCurve: widget.overlayReverseCurve,
+            overlayAnimationBuilder: widget.overlayAnimationBuilder,
             onChanged: (int index) {
               controller.setCurrentIndex(index);
               widget.onChanged?.call(index);

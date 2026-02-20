@@ -361,7 +361,6 @@ if( onboarding?.controller.isVisible ?? false) {
 18. **From v.3.1.0** The package can be used with
     [ResponsiveFramework](https://pub.dev/packages/responsive_framework). For
     this to work as expected you need to perform these changes to your code:
-
     - move `Onboarding` widget under the `ResponsiveWrapper.builder`
     - wrap with a `Builder` to be able to access the inherited widget for
       `ResponsiveWrapperData`
@@ -407,11 +406,13 @@ return MaterialApp(
     `LabelPainter` as a reference
 
 20. **From 3.2.3**
+
 - [animateOverlayHole] is a property that can be set to `false` to disable the animation of the overlay hole.
 - [labelBoxMargin] property to the OnboardingStep so that the user can
   control the space around the label box. Especially useful for limiting maximum width of the label box.
 
 Example:
+
 ```dart
 OnboardingStep(
   focusNode: focusNodes[0],
@@ -426,13 +427,63 @@ OnboardingStep(
 ```
 
 21. **From 3.2.4**
+
 - [labelBoxVerticalDistance] property to the OnboardingStep so that the user can customize the space between the label box and the overlay hole.
 
 Example:
+
 ```dart
 OnboardingStep(
   focusNode: focusNodes[0],
   titleText: 'Tap anywhere to continue',
   labelBoxVerticalDistance: 16.0, // default is kSpace = 4.0
+),
+```
+
+22. **From 3.3.0**
+
+- [titleBodySeparator] - Widget placed between the step `titleText` and `bodyText` in the default label UI. Useful for customizing vertical spacing or inserting a divider-like element.
+- [overlayCurve] - Forward animation curve for the overlay (default: `Curves.ease`). Only used if `overlayAnimationBuilder` is null.
+- [overlayReverseCurve] - Reverse animation curve for the overlay. Only used if `overlayAnimationBuilder` is null.
+- [reverseDuration] - Duration used when reversing (fading out) the overlay. Defaults to `duration` if null.
+- [overlayAnimationBuilder] - Advanced hook to control the overlay animation. If provided, `overlayCurve` and `overlayReverseCurve` are ignored.
+
+Example with custom separator:
+
+```dart
+Onboarding(
+  steps: steps,
+  titleBodySeparator: const SizedBox(height: 12), // Custom spacing
+  child: Home(),
+),
+```
+
+Example with custom curves:
+
+```dart
+Onboarding(
+  steps: steps,
+  duration: const Duration(milliseconds: 500),
+  reverseDuration: const Duration(milliseconds: 250), // Faster fade out
+  overlayCurve: Curves.easeInOut,
+  overlayReverseCurve: Curves.easeIn,
+  child: Home(),
+),
+```
+
+Example with advanced animation builder:
+
+```dart
+Onboarding(
+  steps: steps,
+  overlayAnimationBuilder: (controller) {
+    // Create a custom animation using the controller
+    return CurvedAnimation(
+      parent: controller,
+      curve: Curves.elasticOut,
+      reverseCurve: Curves.fastOutSlowIn,
+    );
+  },
+  child: Home(),
 ),
 ```
